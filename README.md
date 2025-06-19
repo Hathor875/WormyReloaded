@@ -1,6 +1,6 @@
 WormyReloaded is a modernized version of the classic Wormy game written in Python with Pygame.
 Includes new features, bug fixes, and gameplay improvements over the original.
-<<<<<<< HEAD
+
 
 ## Main changes and new features
 
@@ -31,6 +31,5 @@ Includes new features, bug fixes, and gameplay improvements over the original.
 - Red borders in Wall Death mode are drawn exactly on the game edge.
 - Code refactored for clarity and modularity.
 
----
 
-> > > > > > > fdc45b41b4f2f8cad711fff550c32b2cfe0a57c4
+
