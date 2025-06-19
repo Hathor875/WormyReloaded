@@ -4,6 +4,7 @@
 
 
 import random, pygame, sys
+import math
 import configuration
 import load_assets  # added: import ładowania assetów
 
@@ -19,6 +20,7 @@ GREEN     = (  0, 255,   0)
 DARKGREEN = (  0, 155,   0)
 DARKGRAY  = ( 40,  40,  40)
 LIGHTBLUE  = (100, 200, 255)  # added: jasno-niebieski do power-upa
+YELLOW    = (255, 255, 0)  # added: kolor żółty
 BGCOLOR = BLACK
 
 UP = 'up'
@@ -38,11 +40,11 @@ def mainMenu():
     mode_names = ["Portal Mode", "Wall Death"]
     selected = 1  # 0: łatwy, 1: normalny, 2: trudny
     levels = [
-        {"name": "Łatwy", "delay": 9, "multiplier": 1, "music": "game_easy", "super_apples": 3},
-        {"name": "Normalny", "delay": 6, "multiplier": 2, "music": "game_normal", "super_apples": 2},
-        {"name": "Trudny", "delay": 4, "multiplier": 3, "music": "game_hard", "super_apples": 1}
+        {"name": "EASY", "delay": 9, "multiplier": 1, "music": "game_easy", "super_apples": 3},
+        {"name": "MID", "delay": 6, "multiplier": 2, "music": "game_normal", "super_apples": 2},
+        {"name": "HARD", "delay": 4, "multiplier": 3, "music": "game_hard", "super_apples": 1}
     ]
-    # added: odtwarzanie muzyki menu
+    # przywrócone odtwarzanie muzyki menu przez pygame
     pygame.mixer.music.load(MUSIC['menu'])
     pygame.mixer.music.play(-1)
     while True:
@@ -62,7 +64,11 @@ def mainMenu():
             surf = infoFont.render(f'{level["name"]} (x{level["multiplier"]})', True, color)
             rect = surf.get_rect(center=(configuration.WINDOWWIDTH//2, 220 + i*50))
             DISPLAYSURF.blit(surf, rect)
-        infoSurf = infoFont.render('Strzałki góra/dół - poziom, lewo/prawo - tryb, Enter - start, Q - wyjście', True, configuration.DARKGRAY)
+        # Dodaj opcję instrukcji
+        instrSurf = infoFont.render('I - Instructions', True, configuration.LIGHTBLUE)
+        instrRect = instrSurf.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT-100))
+        DISPLAYSURF.blit(instrSurf, instrRect)
+        infoSurf = infoFont.render('Arrows up/down - level, left/right - mode, Enter - start', True, configuration.DARKGRAY)
         infoRect = infoSurf.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT-60))
         DISPLAYSURF.blit(infoSurf, infoRect)
         pygame.display.update()
@@ -78,15 +84,13 @@ def mainMenu():
                     mode_selected = (mode_selected - 1) % len(mode_names)
                 elif event.key == pygame.K_RIGHT:
                     mode_selected = (mode_selected + 1) % len(mode_names)
+                elif event.key == pygame.K_i:
+                    showInstructions()
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
-                    # added: zatrzymaj muzykę menu po wyborze
                     pygame.mixer.music.stop()
-                    # zwróć wybrany poziom + tryb gry
                     result = dict(levels[selected])
                     result['mode'] = mode_names[mode_selected]
                     return result
-                elif event.key == pygame.K_q:
-                    terminate()
 
 # fix: wysokość paska GUI
 UI_HEIGHT = 40
@@ -108,9 +112,10 @@ def main():
     MUSIC = load_assets.load_music()
     # załaduj efekty dźwiękowe do FX
     FX = load_assets.load_fx()
-    level = mainMenu()
+    # showStartScreen() tylko na samym początku gry
     showStartScreen()
     while True:
+        level = mainMenu()
         runGame(level)
         showGameOverScreen()
 
@@ -142,7 +147,7 @@ def getRandomLetterLocation(wormCoords, apple, obstacles, letter_pos=None):
             return {'x': x, 'y': y}
 
 def runGame(level):
-    # added: odtwarzanie muzyki do gry na podstawie klucza z poziomu
+    # przywrócone odtwarzanie muzyki do gry przez pygame
     pygame.mixer.music.load(MUSIC[level['music']])
     pygame.mixer.music.play(-1)
     # Set a random start point.
@@ -168,6 +173,13 @@ def runGame(level):
     super_apples_left = 0  # fix: efekt krzyża domyślnie wyłączony, aktywuje się dopiero po zebraniu napisu WORM
     UI_HEIGHT = 40  # added: wysokość paska UI na górze
     mode = level.get('mode', 'Portal Mode')
+    turbo = False
+    turbo_turns = 0
+    turbo_multiplier = 2  # mnożnik dla turbo
+    turbo_delay = max(1, level['delay'] // 2)  # przyspieszenie w turbo
+    score = 0  # nowy licznik punktów
+    turbo_fx_channel = None
+    turbo_fx_playing = False
     while True: # main game loop
         for event in pygame.event.get(): # event handling loop
             if event.type == pygame.QUIT:
@@ -188,14 +200,33 @@ def runGame(level):
                         new_direction = configuration.DOWN
                 elif event.key == pygame.K_ESCAPE:
                     terminate()
+                elif event.key == pygame.K_SPACE:
+                    turbo = True
+                    if not turbo_fx_playing:
+                        pygame.mixer.music.stop()
+                        turbo_fx_channel = pygame.mixer.find_channel()
+                        if turbo_fx_channel:
+                            turbo_fx_channel.play(FX['dnb9'], loops=-1)
+                            turbo_fx_playing = True
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    turbo = False
+                    if turbo_fx_channel:
+                        turbo_fx_channel.stop()
+                        turbo_fx_channel = None
+                        turbo_fx_playing = False
+                    # po wyjściu z turbo przywróć muzykę gry
+                    pygame.mixer.music.play(-1)
 
         # fix: przesuwamy węża tylko co configuration.SNAKE_MOVE_DELAY klatek
         move_counter += 1
-        if move_counter >= level['delay']:
+        current_delay = turbo_delay if turbo else level['delay']
+        if move_counter >= current_delay:
             move_counter = 0
-            # odtwórz dźwięk tylko jeśli faktycznie następuje skręt
             if direction != new_direction:
                 if FX: FX['whoosh'].play()
+                if turbo:
+                    turbo_turns += 1
             direction = new_direction
 
             head = wormCoords[configuration.HEAD]
@@ -244,6 +275,7 @@ def runGame(level):
                 letter_pos = getRandomLetterLocation(wormCoords, apple, obstacles)
                 if super_apples_left > 0:
                     super_apples_left -= 1
+                score += 100  # +100 za jabłko
             else:
                 del wormCoords[-1] # remove worm's tail segment
 
@@ -268,7 +300,7 @@ def runGame(level):
                     collected_letters = []
                     super_apples_left += level['super_apples']  # sumowanie efektu, a nie nadpisywanie
                     # dźwięk powerup
-                    if FX: FX['powerup'].play()
+                    if FX: load_assets.play_fx(FX['powerup'])
             else:
                 collected_letters = []  # reset
             letter_char = random.choice(LETTERS)
@@ -300,22 +332,22 @@ def runGame(level):
         DISPLAYSURF.fill(configuration.BGCOLOR)
         pygame.draw.rect(DISPLAYSURF, configuration.BLACK, (0, 0, configuration.WINDOWWIDTH, UI_HEIGHT))
         drawGrid(offset_y=UI_HEIGHT, mode=mode)
-        drawWorm(wormCoords, offset_y=UI_HEIGHT)
+        # Rysowanie robaka z innym kolorem w turbo
+        drawWorm(wormCoords, offset_y=UI_HEIGHT, turbo=turbo)
         drawApple(apple, offset_y=UI_HEIGHT)
         drawObstacles(obstacles, offset_y=UI_HEIGHT)
         if super_apples_left > 0:
             drawFullPowerupCross(apple, offset_y=UI_HEIGHT)
         drawLetter(letter_char, letter_pos, offset_y=UI_HEIGHT)
         drawCollectedLetters(collected_letters, super_apples_left > 0, super_apples_left)
-        drawScore((len(wormCoords) - 3) * level['multiplier'])
+        # Dodanie punktów za turbo zakręty
+        base_score = score * level['multiplier']
+        turbo_score = turbo_turns * turbo_multiplier
+        drawScore(base_score + turbo_score)
         pygame.display.update()
         FPSCLOCK.tick(configuration.FPS)
 
-def drawPressKeyMsg():
-    pressKeySurf = BASICFONT.render('Press a key to play.', True, configuration.DARKGRAY)
-    pressKeyRect = pressKeySurf.get_rect()
-    pressKeyRect.topleft = (configuration.WINDOWWIDTH - 200, configuration.WINDOWHEIGHT - 30)
-    DISPLAYSURF.blit(pressKeySurf, pressKeyRect)
+
 
 
 def checkForKeyPress():
@@ -331,22 +363,46 @@ def checkForKeyPress():
 
 
 def showStartScreen():
-    # fix: uproszczony ekran startowy bez animacji, tylko statyczny tytuł i instrukcja
-    titleFont = pygame.font.Font('freesansbold.ttf', 100)
-    titleSurf = titleFont.render('Wormy!', True, configuration.WHITE, configuration.DARKGREEN)
-    titleRect = titleSurf.get_rect(center=(configuration.WINDOWWIDTH / 2, configuration.WINDOWHEIGHT / 2 - 40))
-    infoFont = pygame.font.Font('freesansbold.ttf', 32)
-    infoSurf = infoFont.render('Naciśnij dowolny klawisz, aby rozpocząć', True, configuration.DARKGRAY)
-    infoRect = infoSurf.get_rect(center=(configuration.WINDOWWIDTH / 2, configuration.WINDOWHEIGHT / 2 + 60))
+    # Nowy, efektowny ekran startowy WormyReloaded
+    titleFont = pygame.font.Font('freesansbold.ttf', 80)
+    subtitleFont = pygame.font.Font('freesansbold.ttf', 40)
+    infoFont = pygame.font.Font('freesansbold.ttf', 28)
+    clock = pygame.time.Clock()
+    angle = 0
+    color_shift = 0
+    wormy_colors = [configuration.GREEN, configuration.LIGHTBLUE, configuration.RED, configuration.DARKGREEN]
+    logo_points = [
+        (120, 320), (160, 300), (200, 320), (240, 300), (280, 320), (320, 300), (360, 320)
+    ]
     while True:
-        DISPLAYSURF.fill(configuration.BGCOLOR)
+        DISPLAYSURF.fill((10, 10, 30))
+        # Efektowne logo WormyReloaded
+        titleSurf = titleFont.render('Wormy', True, (255, 255, 255))
+        titleRect = titleSurf.get_rect(center=(configuration.WINDOWWIDTH / 2, 120))
         DISPLAYSURF.blit(titleSurf, titleRect)
+        subtitleSurf = subtitleFont.render('Reloaded', True, (0, 255, 180))
+        subtitleRect = subtitleSurf.get_rect(center=(configuration.WINDOWWIDTH / 2, 190))
+        DISPLAYSURF.blit(subtitleSurf, subtitleRect)
+        # Animowany wąż pod napisem
+        for i, (x, y) in enumerate(logo_points):
+            color = wormy_colors[(i + color_shift) % len(wormy_colors)]
+            pygame.draw.circle(DISPLAYSURF, color, (x + 120, y), 18)
+            pygame.draw.circle(DISPLAYSURF, (0, 0, 0), (x + 120, y), 18, 2)
+        # Efekt świetlny na napisie
+        glowSurf = titleFont.render('Wormy', True, (0, 255, 180))
+        glowSurf.set_alpha(80 + int(60 * abs(math.sin(angle))))
+        DISPLAYSURF.blit(glowSurf, titleRect.move(0, 0))
+        # Instrukcja
+        infoSurf = infoFont.render('Naciśnij dowolny klawisz, aby rozpocząć', True, (200, 200, 200))
+        infoRect = infoSurf.get_rect(center=(configuration.WINDOWWIDTH / 2, configuration.WINDOWHEIGHT - 80))
         DISPLAYSURF.blit(infoSurf, infoRect)
         pygame.display.update()
+        angle += 0.05
+        color_shift = (color_shift + 1) % len(wormy_colors)
         if checkForKeyPress():
             pygame.event.get() # clear event queue
             return
-        FPSCLOCK.tick(configuration.FPS)
+        clock.tick(30)
 
 
 def terminate():
@@ -369,8 +425,9 @@ def getRandomLocation(wormCoords=None, obstacles=None):
 
 
 def showGameOverScreen():
-    # added: zatrzymanie muzyki po game over
+    # zatrzymaj wszystkie dźwięki i muzykę
     pygame.mixer.music.stop()
+    pygame.mixer.stop()
     # odtwórz dźwięk kick (game over)
     if FX: FX['kick'].play()
     gameOverFont = pygame.font.Font('freesansbold.ttf', 150)
@@ -383,7 +440,6 @@ def showGameOverScreen():
 
     DISPLAYSURF.blit(gameSurf, gameRect)
     DISPLAYSURF.blit(overSurf, overRect)
-    drawPressKeyMsg()
     pygame.display.update()
     pygame.time.wait(500)
     checkForKeyPress() # clear out any key presses in the event queue
@@ -401,7 +457,7 @@ def drawScore(score, multiplier=1):
     DISPLAYSURF.blit(scoreSurf, scoreRect)
 
 
-def drawWorm(wormCoords, offset_y=0):
+def drawWorm(wormCoords, offset_y=0, turbo=False):
     for coord in wormCoords:
         # nie rysuj segmentów poza planszą (np. y < 0)
         if coord['y'] < 0:
@@ -409,9 +465,15 @@ def drawWorm(wormCoords, offset_y=0):
         x = coord['x'] * configuration.CELLSIZE
         y = coord['y'] * configuration.CELLSIZE + offset_y
         wormSegmentRect = pygame.Rect(x, y, configuration.CELLSIZE, configuration.CELLSIZE)
-        pygame.draw.rect(DISPLAYSURF, configuration.DARKGREEN, wormSegmentRect)
+        if turbo:
+            pygame.draw.rect(DISPLAYSURF, configuration.YELLOW, wormSegmentRect)
+        else:
+            pygame.draw.rect(DISPLAYSURF, configuration.DARKGREEN, wormSegmentRect)
         wormInnerSegmentRect = pygame.Rect(x + 4, y + 4, configuration.CELLSIZE - 8, configuration.CELLSIZE - 8)
-        pygame.draw.rect(DISPLAYSURF, configuration.GREEN, wormInnerSegmentRect)
+        if turbo:
+            pygame.draw.rect(DISPLAYSURF, configuration.YELLOW, wormInnerSegmentRect)
+        else:
+            pygame.draw.rect(DISPLAYSURF, configuration.GREEN, wormInnerSegmentRect)
 
 
 def drawApple(coord, offset_y=0):
@@ -480,6 +542,32 @@ def drawFullPowerupCross(apple, offset_y=0):
     pygame.draw.rect(overlay, (100, 200, 255, alpha), rect_h)
     DISPLAYSURF.blit(overlay, (0, offset_y))
 
+
+def showInstructions():
+    font = pygame.font.Font('freesansbold.ttf', 22)
+    smallfont = pygame.font.Font('freesansbold.ttf', 16)
+    instructions = [
+        'Instructions:',
+        '- Arrows/WASD: control the worm',
+        '- Space: TURBO (speed up, yellow worm, points for turns)',
+        '- Collect apples (100 pts each)',
+        '- Collect WORM letters to activate super-apples',
+        '- Modes: Portal (wrap around) or Wall Death (wall = game over)',
+        '',
+        'Press any key to return to menu.'
+    ]
+    while True:
+        DISPLAYSURF.fill(configuration.BGCOLOR)
+        for i, line in enumerate(instructions):
+            surf = font.render(line, True, configuration.WHITE) if i == 0 else smallfont.render(line, True, configuration.LIGHTBLUE)
+            rect = surf.get_rect(center=(configuration.WINDOWWIDTH//2, 80 + i*28))
+            DISPLAYSURF.blit(surf, rect)
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN:
+                return
 
 if __name__ == '__main__':
     main()

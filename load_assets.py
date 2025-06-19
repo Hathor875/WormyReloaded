@@ -2,7 +2,7 @@ import pygame
 import configuration
 import os
 
-# added: funkcja do ładowania muzyki z podziałem na menu i różne poziomy gry
+# przywrócona funkcja do ładowania muzyki przez pygame
 
 def load_music():
     pygame.mixer.init()
@@ -15,11 +15,11 @@ def load_music():
     return music_tracks
 
 def load_fx():
-    # fix: ładowanie efektów dźwiękowych na podstawie ścieżek z configuration.py
     fx = {
         'powerup': pygame.mixer.Sound(configuration.FX_PATH_POWERUP),
         'whoosh': pygame.mixer.Sound(configuration.FX_PATH_WHOOSH),
         'laser': pygame.mixer.Sound(configuration.FX_PATH_LASER),
         'kick': pygame.mixer.Sound(configuration.FX_PATH_KICK),
+        'dnb9': pygame.mixer.Sound(configuration.FX_PATH_DNB9),
     }
     return fx
