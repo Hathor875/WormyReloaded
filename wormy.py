@@ -7,6 +7,7 @@ import random, pygame, sys
 import math
 import configuration
 import load_assets  # added: import ładowania assetów
+import highscores
 
 # fix: jawny import stałych z configuration.py
 assert configuration.WINDOWWIDTH % configuration.CELLSIZE == 0, "Window width must be a multiple of cell size."
@@ -31,6 +32,55 @@ RIGHT = 'right'
 HEAD = 0 # syntactic sugar: index of the worm's head
 
 LETTERS = ['W', 'O', 'R', 'M']
+
+def display_scores(mode):
+    """Wyświetl tabelę wyników dla danego trybu."""
+    font = pygame.font.Font('freesansbold.ttf', 32)
+    smallfont = pygame.font.Font('freesansbold.ttf', 24)
+    scores = highscores.read_highscores(mode)
+    
+    while True:
+        DISPLAYSURF.fill(BGCOLOR)
+        
+        # Tytuł
+        title = font.render(f'Najlepsze wyniki - {mode}', True, YELLOW)
+        titleRect = title.get_rect(center=(configuration.WINDOWWIDTH//2, 50))
+        DISPLAYSURF.blit(title, titleRect)
+        
+        # Tabela wyników
+        if not scores:
+            noScores = smallfont.render('Brak wyników', True, WHITE)
+            noScoresRect = noScores.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT//2))
+            DISPLAYSURF.blit(noScores, noScoresRect)
+        else:
+            for i, score in enumerate(scores):
+                y_pos = 120 + i * 35
+                # Miejsce i nazwa
+                place_name = smallfont.render(f"{i+1}. {score['name']}", True, WHITE)
+                DISPLAYSURF.blit(place_name, (80, y_pos))
+                
+                # Wynik
+                score_text = smallfont.render(str(score['score']), True, YELLOW)
+                score_rect = score_text.get_rect(right=configuration.WINDOWWIDTH-200, top=y_pos)
+                DISPLAYSURF.blit(score_text, score_rect)
+                
+                # Poziom trudności
+                diff_text = smallfont.render(score['difficulty'], True, LIGHTBLUE)
+                DISPLAYSURF.blit(diff_text, (configuration.WINDOWWIDTH-180, y_pos))
+        
+        # Instrukcja wyjścia
+        exitText = smallfont.render('ESC - Powrót do menu', True, DARKGRAY)
+        exitRect = exitText.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT-40))
+        DISPLAYSURF.blit(exitText, exitRect)
+        
+        pygame.display.update()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return
 
 def mainMenu():
     # added: proste menu główne z wyborem poziomu trudności, mnożnikami punktów i kluczem muzyki
@@ -66,8 +116,13 @@ def mainMenu():
             DISPLAYSURF.blit(surf, rect)
         # Dodaj opcję instrukcji
         instrSurf = infoFont.render('I - Instructions', True, configuration.LIGHTBLUE)
-        instrRect = instrSurf.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT-100))
+        instrRect = instrSurf.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT-120))
         DISPLAYSURF.blit(instrSurf, instrRect)
+        
+        scoreSurf = infoFont.render('S - High Scores', True, configuration.LIGHTBLUE)
+        scoreRect = scoreSurf.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT-90))
+        DISPLAYSURF.blit(scoreSurf, scoreRect)
+        
         infoSurf = infoFont.render('Arrows up/down - level, left/right - mode, Enter - start', True, configuration.DARKGRAY)
         infoRect = infoSurf.get_rect(center=(configuration.WINDOWWIDTH//2, configuration.WINDOWHEIGHT-60))
         DISPLAYSURF.blit(infoSurf, infoRect)
@@ -86,6 +141,8 @@ def mainMenu():
                     mode_selected = (mode_selected + 1) % len(mode_names)
                 elif event.key == pygame.K_i:
                     showInstructions()
+                elif event.key == pygame.K_s:
+                    display_scores(mode_names[mode_selected])
                 elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     pygame.mixer.music.stop()
                     result = dict(levels[selected])
@@ -111,13 +168,15 @@ def main():
     # fix: załaduj muzykę do obiektu MUSIC przed wywołaniem mainMenu
     MUSIC = load_assets.load_music()
     # załaduj efekty dźwiękowe do FX
-    FX = load_assets.load_fx()
-    # showStartScreen() tylko na samym początku gry
+    FX = load_assets.load_fx()    # showStartScreen() tylko na samym początku gry
     showStartScreen()
+    
     while True:
         level = mainMenu()
-        runGame(level)
-        showGameOverScreen()
+        score = runGame(level)  # Odbieramy wynik z gry
+        if score is None:
+            score = 0
+        showGameOverScreen(score, level['mode'], level['name'])
 
 
 def generate_obstacles(wormCoords, apple, num_obstacles=10):
@@ -230,11 +289,12 @@ def runGame(level):
             direction = new_direction
 
             head = wormCoords[configuration.HEAD]
-            teleported = False
-            # obsługa trybu Wall Death
+            teleported = False            # obsługa trybu Wall Death
             if mode == 'Wall Death':
                 if head['x'] < 0 or head['x'] >= configuration.CELLWIDTH or head['y'] < 0 or head['y'] >= configuration.CELLHEIGHT:
-                    return  # game over przy uderzeniu w ścianę
+                    base_score = score * level['multiplier']
+                    turbo_score = turbo_turns * turbo_multiplier
+                    return base_score + turbo_score  # game over przy uderzeniu w ścianę
             else:  # Portal Mode
                 if head['y'] < 0:
                     new_y = configuration.CELLHEIGHT - 1
@@ -258,12 +318,16 @@ def runGame(level):
             if not teleported:
                 for wormBody in wormCoords[1:]:
                     if wormBody['x'] == head['x'] and wormBody['y'] == head['y']:
-                        return # game over
+                        base_score = score * level['multiplier']
+                        turbo_score = turbo_turns * turbo_multiplier
+                        return base_score + turbo_score  # game over
 
             # fix: kolizja z przeszkodą = game over
             for obs in obstacles:
                 if wormCoords[configuration.HEAD]['x'] == obs['x'] and wormCoords[configuration.HEAD]['y'] == obs['y']:
-                    return # game over
+                    base_score = score * level['multiplier']
+                    turbo_score = turbo_turns * turbo_multiplier
+                    return base_score + turbo_score  # game over
 
             # check if the worm has eaten an apply
             # fix: zebranie jabłka zmniejsza liczbę super-jabłek
@@ -332,7 +396,6 @@ def runGame(level):
         DISPLAYSURF.fill(configuration.BGCOLOR)
         pygame.draw.rect(DISPLAYSURF, configuration.BLACK, (0, 0, configuration.WINDOWWIDTH, UI_HEIGHT))
         drawGrid(offset_y=UI_HEIGHT, mode=mode)
-        # Rysowanie robaka z innym kolorem w turbo
         drawWorm(wormCoords, offset_y=UI_HEIGHT, turbo=turbo)
         drawApple(apple, offset_y=UI_HEIGHT)
         drawObstacles(obstacles, offset_y=UI_HEIGHT)
@@ -344,6 +407,7 @@ def runGame(level):
         base_score = score * level['multiplier']
         turbo_score = turbo_turns * turbo_multiplier
         drawScore(base_score + turbo_score)
+        drawSnakeLength(len(wormCoords))  # Dodaj licznik długości węża
         pygame.display.update()
         FPSCLOCK.tick(configuration.FPS)
 
@@ -424,30 +488,136 @@ def getRandomLocation(wormCoords=None, obstacles=None):
             return {'x': x, 'y': y}
 
 
-def showGameOverScreen():
+def showGameOverScreen(score=0, mode="Portal Mode", difficulty="EASY"):
     # zatrzymaj wszystkie dźwięki i muzykę
     pygame.mixer.music.stop()
     pygame.mixer.stop()
     # odtwórz dźwięk kick (game over)
     if FX: FX['kick'].play()
-    gameOverFont = pygame.font.Font('freesansbold.ttf', 150)
-    gameSurf = gameOverFont.render('Game', True, configuration.WHITE)
-    overSurf = gameOverFont.render('Over', True, configuration.WHITE)
+    
+    # Sprawdź, czy wynik kwalifikuje się do tablicy wyników
+    current_scores = highscores.read_highscores(mode)
+    qualifies = len(current_scores) < 10 or score > min(score['score'] for score in current_scores)
+    
+    gameOverFont = pygame.font.Font('freesansbold.ttf', 100)
+    infoFont = pygame.font.Font('freesansbold.ttf', 32)
+    
+    # Oblicz pozycje elementów
+    window_center_x = configuration.WINDOWWIDTH / 2
+    window_center_y = configuration.WINDOWHEIGHT / 2
+    
+    # Renderuj "Game Over"
+    gameSurf = gameOverFont.render('Game Over', True, configuration.WHITE)
     gameRect = gameSurf.get_rect()
-    overRect = overSurf.get_rect()
-    gameRect.midtop = (configuration.WINDOWWIDTH / 2, 10)
-    overRect.midtop = (configuration.WINDOWWIDTH / 2, gameRect.height + 10 + 25)
-
+    gameRect.center = (window_center_x, window_center_y - 100)
+    
+    # Wyświetl końcowy wynik
+    scoreSurf = infoFont.render(f'Final Score: {score}', True, configuration.WHITE)
+    scoreRect = scoreSurf.get_rect()
+    scoreRect.center = (window_center_x, window_center_y)
+    
+    DISPLAYSURF.fill(configuration.BGCOLOR)
     DISPLAYSURF.blit(gameSurf, gameRect)
-    DISPLAYSURF.blit(overSurf, overRect)
-    pygame.display.update()
-    pygame.time.wait(500)
-    checkForKeyPress() # clear out any key presses in the event queue
-
-    while True:
-        if checkForKeyPress():
-            pygame.event.get() # clear event queue
-            return
+    DISPLAYSURF.blit(scoreSurf, scoreRect)
+    
+    if qualifies:
+        name = ""
+        nameEntered = False
+        cursor_visible = True
+        cursor_time = pygame.time.get_ticks()
+        
+        while not nameEntered:
+            current_time = pygame.time.get_ticks()
+            
+            # Miganie kursora co 530ms
+            if current_time - cursor_time > 530:
+                cursor_visible = not cursor_visible
+                cursor_time = current_time
+            
+            DISPLAYSURF.fill(configuration.BGCOLOR)
+            DISPLAYSURF.blit(gameSurf, gameRect)
+            DISPLAYSURF.blit(scoreSurf, scoreRect)
+            
+            # Komunikat o nowym rekordzie
+            promptSurf = infoFont.render('New High Score!', True, configuration.YELLOW)
+            promptRect = promptSurf.get_rect()
+            promptRect.center = (window_center_x, window_center_y + 50)
+            
+            # Instrukcja wpisywania imienia
+            enterSurf = infoFont.render('Enter your name (4 chars):', True, configuration.WHITE)
+            enterRect = enterSurf.get_rect()
+            enterRect.center = (window_center_x, window_center_y + 90)
+            
+            # Pole do wpisywania imienia z migającym kursorem
+            if len(name) < 4:
+                display_name = name + ("▋" if cursor_visible else " ")
+            else:
+                display_name = name
+            
+            nameSurf = infoFont.render(display_name, True, 
+                                     configuration.YELLOW if len(name) == 4 else configuration.WHITE)
+            nameRect = nameSurf.get_rect()
+            nameRect.center = (window_center_x, window_center_y + 130)
+            
+            # Ramka wokół pola wprowadzania
+            input_bg_rect = pygame.Rect(0, 0, 150, 40)
+            input_bg_rect.center = nameRect.center
+            pygame.draw.rect(DISPLAYSURF, configuration.DARKGRAY, input_bg_rect, 1)
+            
+            # Instrukcja zatwierdzenia i licznik znaków
+            if len(name) == 4:
+                confirmSurf = infoFont.render('Press Enter to continue', True, 
+                                            configuration.YELLOW if cursor_visible else configuration.DARKGRAY)
+                confirmRect = confirmSurf.get_rect()
+                confirmRect.center = (window_center_x, window_center_y + 170)
+                DISPLAYSURF.blit(confirmSurf, confirmRect)
+            else:
+                # Licznik wprowadzonych znaków
+                counterSurf = infoFont.render(f'{len(name)}/4', True, configuration.DARKGRAY)
+                counterRect = counterSurf.get_rect()
+                counterRect.center = (window_center_x, window_center_y + 170)
+                DISPLAYSURF.blit(counterSurf, counterRect)
+            
+            DISPLAYSURF.blit(promptSurf, promptRect)
+            DISPLAYSURF.blit(enterSurf, enterRect)
+            DISPLAYSURF.blit(nameSurf, nameRect)
+            
+            pygame.display.update()
+            FPSCLOCK.tick(30)  # Limit FPS dla płynnej animacji
+            
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    terminate()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN and len(name) == 4:
+                        if FX: FX['laser'].play()
+                        nameEntered = True
+                    elif event.key == pygame.K_BACKSPACE and len(name) > 0:
+                        name = name[:-1]
+                        if FX: FX['whoosh'].play()
+                    elif len(name) < 4 and event.unicode.isalnum():
+                        name += event.unicode.upper()
+                        if FX: FX['powerup'].play()
+        
+        # Zapisz wynik
+        highscores.save_highscore(mode, score, name, difficulty)
+    else:
+        # Wyświetl informację o naciśnięciu klawisza
+        pressKeySurf = infoFont.render('Press any key to continue', True, configuration.DARKGRAY)
+        pressKeyRect = pressKeySurf.get_rect()
+        pressKeyRect.center = (window_center_x, window_center_y + 50)
+        DISPLAYSURF.blit(pressKeySurf, pressKeyRect)
+        pygame.display.update()
+        
+        pygame.time.wait(500)
+        checkForKeyPress() # clear out any key presses in the event queue
+        
+        while True:
+            if checkForKeyPress():
+                pygame.event.get() # clear event queue
+                return
+    
+    return
 
 def drawScore(score, multiplier=1):
     # fix: nie wyświetlaj mnożnika
@@ -568,6 +738,13 @@ def showInstructions():
                 terminate()
             elif event.type == pygame.KEYDOWN:
                 return
+
+def drawSnakeLength(length):
+    """Wyświetla długość węża na pasku UI."""
+    lengthSurf = BASICFONT.render(f'Length: {length}', True, configuration.YELLOW)
+    lengthRect = lengthSurf.get_rect()
+    lengthRect.topleft = (configuration.WINDOWWIDTH - 350, 5)
+    DISPLAYSURF.blit(lengthSurf, lengthRect)
 
 if __name__ == '__main__':
     main()

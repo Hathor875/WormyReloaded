@@ -1,35 +1,53 @@
 WormyReloaded is a modernized version of the classic Wormy game written in Python with Pygame.
-Includes new features, bug fixes, and gameplay improvements over the original.
 
+## Features
 
-## Main changes and new features
+- Main menu with difficulty and mode selection
+- Two game modes: **Portal Mode** (edge teleportation) and **Wall Death** (game over on wall hit)
+- Random obstacles, power-ups, and the WORM word collection mechanic
+- Sound effects and music (menu and in-game)
+- Highscore system (separate for each mode)
+- GUI bar with score, WORM word, and super-apple counter
+- All configuration in `configuration.py`
 
-### New features:
+## Project structure
 
-- Main menu with difficulty selection, score multipliers, and music.
-- Game mode selection: **Portal Mode** (edge teleportation) or **Wall Death** (game over on wall hit, red borders).
-- Randomly generated obstacles that never overlap with the worm or apple.
-- Power-up after collecting the **WORM** word: collect letters in order, blinking current letter, super-apple counter.
-- Semi-transparent cross effect during power-up, permanently removing obstacles.
-- Power-up effect stacks: collecting another WORM while active increases the super-apple counter.
-- GUI bar with WORM word, super-apple counter, and clear score display.
+- `wormy.py` – main game logic and loop
+- `configuration.py` – game constants and settings
+- `highscores.py` – highscore management (YAML files)
+- `load_assets.py` – loading music and sound effects
+- `music_player.py` – advanced music playback (pydub)
+- `assets/` – sound and music files
+- `requirements.txt` – dependencies
 
-### Sound effects and music:
+## How to run
 
-- Music in the menu and during gameplay (different tracks for each difficulty).
-- Sound effects:
-  - "whoosh" when the worm actually turns,
-  - "laser" when collecting an apple,
-  - "powerup" when activating the power-up,
-  - "kick" on game over.
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Run the game:
+   ```bash
+   python wormy.py
+   ```
 
-### Fixes and refactoring:
+## Controls
 
-- All constants moved to `configuration.py`.
-- Improved collision logic, apple generation, obstacle handling, and teleportation.
-- The worm never appears on the GUI bar during teleportation.
-- Red borders in Wall Death mode are drawn exactly on the game edge.
-- Code refactored for clarity and modularity.
+- Arrow keys / WASD – move the worm
+- SPACE – turbo mode (if available)
+- ESC – exit or return to menu
+
+## Highscores
+
+Highscores are saved in YAML files (`highscores_portal.yml`, `highscores_wall.yml`) for each mode separately. Only the top 10 scores are kept.
+
+## Assets
+
+All music and sound effects are in the `assets/` directory. You can replace them with your own `.ogg` files if you wish.
+
+---
+
+If you want to split the code into smaller files, see the suggested structure in the issues or ask the author for a modular version.
 
 
 
