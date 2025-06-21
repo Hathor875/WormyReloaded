@@ -4,10 +4,10 @@ import configuration
 def load_music():
     pygame.mixer.init()
     music_tracks = {
-        'menu': configuration.MUSIC_PATH_1,  # muzyka do menu głównego
-        'game_easy': configuration.MUSIC_PATH_2,   # muzyka do gry - łatwy
-        'game_normal': configuration.MUSIC_PATH_3, # muzyka do gry - normalny
-        'game_hard': configuration.MUSIC_PATH_4    # muzyka do gry - trudny
+        'menu': configuration.MUSIC_PATH_1,
+        'game_easy': configuration.MUSIC_PATH_2,
+        'game_normal': configuration.MUSIC_PATH_3,
+        'game_hard': configuration.MUSIC_PATH_4
     }
     return music_tracks
 

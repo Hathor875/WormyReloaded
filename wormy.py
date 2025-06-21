@@ -4,11 +4,9 @@ from configuration import WINDOWWIDTH, WINDOWHEIGHT, CELLSIZE
 import highscores
 import load_assets
 
-# fix: jawny import stałych z configuration.py
 assert WINDOWWIDTH % CELLSIZE == 0, "Window width must be a multiple of cell size."
 assert WINDOWHEIGHT % CELLSIZE == 0, "Window height must be a multiple of cell size."
 
-#             R    G    B
 WHITE     = (255, 255, 255)
 BLACK     = (  0,   0,   0)
 RED       = (255,   0,   0)
@@ -36,7 +34,6 @@ def terminate():
     sys.exit()
 
 def display_scores(mode):
-    """Wyświetl tabelę wyników dla danego trybu."""
     font = pygame.font.Font('freesansbold.ttf', 32)
     smallfont = pygame.font.Font('freesansbold.ttf', 24)
     scores = highscores.read_highscores(mode)
@@ -72,9 +69,9 @@ def display_scores(mode):
 def mainMenu():
     menuFont = pygame.font.Font('freesansbold.ttf', 40)
     infoFont = pygame.font.Font('freesansbold.ttf', 24)
-    mode_selected = 0  # 0: Portal Mode, 1: Wall Death
+    mode_selected = 0
     mode_names = ["Portal Mode", "Wall Death"]
-    difficulty_selection = 1  # 0: łatwy, 1: normalny, 2: trudny
+    difficulty_selection = 1
     levels = [
         {"name": "EASY", "delay": 9, "multiplier": 1, "music": "game_easy", "super_apples": 3},
         {"name": "MID", "delay": 6, "multiplier": 2, "music": "game_normal", "super_apples": 2},
@@ -87,19 +84,16 @@ def mainMenu():
         titleSurf = menuFont.render('WormyReloaded - Menu', True, configuration.WHITE)
         titleRect = titleSurf.get_rect(center=(WINDOWWIDTH//2, 80))
         DISPLAYSURF.blit(titleSurf, titleRect)
-        # tryb gry
         for i, mode in enumerate(mode_names):
             color = configuration.RED if i == mode_selected else configuration.WHITE
             surf = infoFont.render(f"Tryb: {mode}", True, color)
             rect = surf.get_rect(center=(WINDOWWIDTH//2, 140 + i*30))
             DISPLAYSURF.blit(surf, rect)
-        # poziomy trudności
         for i, level in enumerate(levels):
             color = configuration.GREEN if i == difficulty_selection else configuration.WHITE
             surf = infoFont.render(f'{level["name"]} (x{level["multiplier"]})', True, color)
             rect = surf.get_rect(center=(WINDOWWIDTH//2, 220 + i*50))
             DISPLAYSURF.blit(surf, rect)
-        # Dodaj opcję instrukcji
         instrSurf = infoFont.render('I - Instructions', True, configuration.LIGHTBLUE)
         instrRect = instrSurf.get_rect(center=(WINDOWWIDTH//2, WINDOWHEIGHT-120))
         DISPLAYSURF.blit(instrSurf, instrRect)
@@ -135,7 +129,6 @@ def mainMenu():
                     return result
 
 def generate_obstacles(wormCoords, apple, num_obstacles=10):
-    # added: generowanie losowych przeszkód, nie kolidujących z wężem i jabłkiem
     obstacles = []
     occupied = set((seg['x'], seg['y']) for seg in wormCoords)
     occupied.add((apple['x'], apple['y']))
@@ -176,10 +169,10 @@ def runGame(level):
     letter_char = random.choice(LETTERS)
     letter_pos = getRandomLetterLocation(wormCoords, apple, obstacles)
     collected_letters = []
-    powerup_active = False
+    powerup_active = True
     powerup_timer = 0
     tick = 0
-    super_apples_left = 0 
+    super_apples_left = 1
     mode = level.get('mode', 'Portal Mode')
     turbo = False
     turbo_turns = 0
@@ -188,12 +181,12 @@ def runGame(level):
     score = 0  
     turbo_fx_channel = None
     turbo_fx_playing = False
+    paused = False  
     while True: 
         for event in pygame.event.get(): 
             if event.type == pygame.QUIT:
                 terminate()
             elif event.type == pygame.KEYDOWN:
-                # fix: zmiana kierunku zapisywana do new_direction
                 if (event.key == pygame.K_LEFT or event.key == pygame.K_a) and direction != configuration.RIGHT:
                     if new_direction != configuration.LEFT:
                         new_direction = configuration.LEFT
@@ -216,6 +209,19 @@ def runGame(level):
                         if turbo_fx_channel:
                             turbo_fx_channel.play(FX['dnb9'], loops=-1)
                             turbo_fx_playing = True
+                elif event.key == pygame.K_p:
+                    paused = True
+                    while paused:
+                        font = pygame.font.Font('freesansbold.ttf', 36)
+                        pause_text = font.render('PAUSE', True, configuration.WHITE)
+                        text_rect = pause_text.get_rect(center=(configuration.WINDOWWIDTH // 2, configuration.WINDOWHEIGHT // 2))
+                        DISPLAYSURF.blit(pause_text, text_rect)
+                        pygame.display.update()
+                        for pause_event in pygame.event.get():
+                            if pause_event.type == pygame.KEYDOWN and pause_event.key == pygame.K_p:
+                                paused = False
+                            elif pause_event.type == pygame.QUIT:
+                                terminate()
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_SPACE:
                     turbo = False
@@ -240,7 +246,7 @@ def runGame(level):
                 if head['x'] < 0 or head['x'] >= configuration.CELLWIDTH or head['y'] < 0 or head['y'] >= configuration.CELLHEIGHT:
                     base_score = score * level['multiplier']
                     turbo_score = turbo_turns * turbo_multiplier
-                    return base_score + turbo_score  # game over przy uderzeniu w ścianę
+                    return base_score + turbo_score  
             else:  
                 if head['y'] < 0:
                     new_y = configuration.CELLHEIGHT - 1
@@ -267,28 +273,23 @@ def runGame(level):
                         turbo_score = turbo_turns * turbo_multiplier
                         return base_score + turbo_score  
 
-            # fix: kolizja z przeszkodą = game over
             for obs in obstacles:
                 if wormCoords[configuration.HEAD]['x'] == obs['x'] and wormCoords[configuration.HEAD]['y'] == obs['y']:
                     base_score = score * level['multiplier']
                     turbo_score = turbo_turns * turbo_multiplier
-                    return base_score + turbo_score  # game over
+                    return base_score + turbo_score  
 
-            # check if the worm has eaten an apply
-            # fix: zebranie jabłka zmniejsza liczbę super-jabłek
             if wormCoords[configuration.HEAD]['x'] == apple['x'] and wormCoords[configuration.HEAD]['y'] == apple['y']:
-                # dźwięk zebrania jabłka
                 if FX: FX['laser'].play()
-                apple = getRandomLocation(wormCoords, obstacles) # set a new apple somewhere
+                apple = getRandomLocation(wormCoords, obstacles) 
                 letter_char = random.choice(LETTERS)
                 letter_pos = getRandomLetterLocation(wormCoords, apple, obstacles)
                 if super_apples_left > 0:
                     super_apples_left -= 1
-                score += 100  # +100 za jabłko
+                score += 100  
             else:
-                del wormCoords[-1] # remove worm's tail segment
+                del wormCoords[-1] 
 
-            # move the worm by adding a segment in the direction it is moving
             if direction == configuration.UP:
                 newHead = {'x': wormCoords[configuration.HEAD]['x'], 'y': wormCoords[configuration.HEAD]['y'] - 1}
             elif direction == configuration.DOWN:
@@ -300,7 +301,6 @@ def runGame(level):
             wormCoords.insert(0, newHead)
 
         
-        # fix: kolejność liter ma znaczenie, zła litera resetuje kolekcję
         if wormCoords[configuration.HEAD]['x'] == letter_pos['x'] and wormCoords[configuration.HEAD]['y'] == letter_pos['y']:
             expected_letter = LETTERS[len(collected_letters)]
             if letter_char == expected_letter:
@@ -315,12 +315,7 @@ def runGame(level):
             letter_char = random.choice(LETTERS)
             letter_pos = getRandomLetterLocation(wormCoords, apple, obstacles)
         if powerup_active:
-            cross = [
-                {'x': apple['x'], 'y': apple['y'] - 1},
-                {'x': apple['x'], 'y': apple['y'] + 1},
-                {'x': apple['x'] - 1, 'y': apple['y']},
-                {'x': apple['x'] + 1, 'y': apple['y']}
-            ]
+         
             powerup_timer -= 1
             if powerup_timer <= 0:
                 powerup_active = False
@@ -334,11 +329,10 @@ def runGame(level):
             drawFullPowerupCross(apple, offset_y=UI_HEIGHT)
         drawLetter(letter_char, letter_pos, offset_y=UI_HEIGHT)
         drawCollectedLetters(collected_letters, super_apples_left > 0, super_apples_left)
-        # Dodanie punktów za turbo zakręty
         base_score = score * level['multiplier']
         turbo_score = turbo_turns * turbo_multiplier
         drawScore(base_score + turbo_score)
-        drawSnakeLength(len(wormCoords))  # Dodaj licznik długości węża
+        drawSnakeLength(len(wormCoords))  
         pygame.display.update()
         FPSCLOCK.tick(configuration.FPS)
 
@@ -505,11 +499,10 @@ def drawGrid(offset_y=0, mode='Portal Mode'):
     if mode == 'Wall Death':
         border_color = configuration.RED
         border_rect = pygame.Rect(0, offset_y, configuration.WINDOWWIDTH, configuration.WINDOWHEIGHT)
-        pygame.draw.rect(DISPLAYSURF, border_color, border_rect, 2)  # grubość 2 px
+        pygame.draw.rect(DISPLAYSURF, border_color, border_rect, 2)  
 
 
 def drawObstacles(obstacles, offset_y=0):
-    # added: rysowanie przeszkód jako szare kwadraty
     for obs in obstacles:
         x = obs['x'] * configuration.CELLSIZE
         y = obs['y'] * configuration.CELLSIZE + offset_y
@@ -523,7 +516,6 @@ def drawLetter(char, pos, offset_y=0):
     DISPLAYSURF.blit(surf, rect)
 
 def drawCollectedLetters(collected, powerup_active, super_apples_left=0):
-    # fix: usunięcie lokalnego importu pygame, użycie globalnego
     font = pygame.font.Font('freesansbold.ttf', 24)
     blink = (pygame.time.get_ticks() // 300) % 2 == 0
     for i, l in enumerate(LETTERS):
@@ -544,9 +536,8 @@ def drawCollectedLetters(collected, powerup_active, super_apples_left=0):
 
 def drawFullPowerupCross(apple, offset_y=0):
     overlay = pygame.Surface((configuration.WINDOWWIDTH, configuration.WINDOWHEIGHT), pygame.SRCALPHA)
-    alpha = 50  # Increased alpha for better visibility
+    alpha = 15
 
-    # Validate apple coordinates
     if 'x' not in apple or 'y' not in apple:
         print("Error: Invalid apple coordinates")
         return
@@ -554,14 +545,12 @@ def drawFullPowerupCross(apple, offset_y=0):
     x = apple['x'] * configuration.CELLSIZE
     y = apple['y'] * configuration.CELLSIZE
 
-    # Ensure rectangles are within bounds
     rect_v = pygame.Rect(x, 0, configuration.CELLSIZE, configuration.WINDOWHEIGHT)
     rect_h = pygame.Rect(0, y, configuration.WINDOWWIDTH, configuration.CELLSIZE)
 
-    pygame.draw.rect(overlay, (100, 200, 255, alpha), rect_v)
-    pygame.draw.rect(overlay, (100, 200, 255, alpha), rect_h)
+    pygame.draw.rect(overlay, (0, 255, 0, alpha), rect_v)  # Changed color to green
+    pygame.draw.rect(overlay, (0, 255, 0, alpha), rect_h)  # Changed color to green
 
-    # Blit overlay to the display surface
     DISPLAYSURF.blit(overlay, (0, offset_y))
 
 def showInstructions():
@@ -591,7 +580,6 @@ def showInstructions():
                 return
 
 def drawSnakeLength(length):
-    """Wyświetla długość węża na pasku UI."""
     lengthSurf = BASICFONT.render(f'Length: {length}', True, configuration.YELLOW)
     lengthRect = lengthSurf.get_rect()
     lengthRect.topleft = (configuration.WINDOWWIDTH - 350, 5)

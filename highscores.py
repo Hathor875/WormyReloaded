@@ -1,6 +1,6 @@
 import yaml
 import os
-from datetime import datetime
+
 
 HIGHSCORE_FILES = {
     "Portal Mode": "highscores_portal.yml",
@@ -20,14 +20,14 @@ DEFAULT_SCORES = {
     ]
 }
 
-# Inicjalizacja pliku dla danego trybu
+
 def init_highscore_file(mode):
     file = HIGHSCORE_FILES[mode]
     if not os.path.exists(file):
         with open(file, 'w') as f:
             yaml.dump(DEFAULT_SCORES[mode], f)
 
-# Odczyt rekordów dla danego trybu
+
 def read_highscores(mode):
     init_highscore_file(mode)
     file = HIGHSCORE_FILES[mode]
@@ -42,16 +42,15 @@ def read_highscores(mode):
         data = []
     return data if data else DEFAULT_SCORES[mode]
 
-# Zapis nowego rekordu (tylko jeśli mieści się w top 10)
+
 def save_highscore(mode, score, name, difficulty=None):
     if not isinstance(score, (int, float)):
-        return None  # Ignoruj nieprawidłowe wyniki
+        return None
     
     init_highscore_file(mode)
     file = HIGHSCORE_FILES[mode]
     data = read_highscores(mode)
 
-    # Upewnij się, że name ma dokładnie 4 znaki
     name = name[:4].upper()
     if len(name) < 4:
         name = name.ljust(4, '_')
@@ -62,7 +61,6 @@ def save_highscore(mode, score, name, difficulty=None):
     }
     
     data.append(new_entry)
-    # Sortuj malejąco i zostaw tylko 10 najlepszych
     data = sorted(data, key=lambda x: int(x['score']), reverse=True)[:10]
     
     try:
