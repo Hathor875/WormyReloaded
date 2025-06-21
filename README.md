@@ -1,3 +1,5 @@
+# WormyReloaded
+
 WormyReloaded is a modernized version of the classic Wormy game written in Python with Pygame.
 
 ## Features
@@ -6,7 +8,7 @@ WormyReloaded is a modernized version of the classic Wormy game written in Pytho
 - Two game modes: **Portal Mode** (edge teleportation) and **Wall Death** (game over on wall hit)
 - Random obstacles, power-ups, and the WORM word collection mechanic
 - Sound effects and music (menu and in-game)
-- Highscore system (separate for each mode)
+- Highscore system (separate for each mode, YAML files)
 - GUI bar with score, WORM word, and super-apple counter
 - All configuration in `configuration.py`
 
@@ -16,7 +18,6 @@ WormyReloaded is a modernized version of the classic Wormy game written in Pytho
 - `configuration.py` – game constants and settings
 - `highscores.py` – highscore management (YAML files)
 - `load_assets.py` – loading music and sound effects
-- `music_player.py` – advanced music playback (pydub)
 - `assets/` – sound and music files
 - `requirements.txt` – dependencies
 
@@ -43,11 +44,15 @@ Highscores are saved in YAML files (`highscores_portal.yml`, `highscores_wall.ym
 
 ## Assets
 
-All music and sound effects are in the `assets/` directory. You can replace them with your own `.ogg` files if you wish.
+All music and sound effects are in the `assets/` directory:
+- `assets/fx/` – sound effects (`.ogg`)
+- `assets/music/` – music tracks (`.ogg`)
+
+You can replace them with your own `.ogg` files if you wish.
 
 ---
 
-If you want to split the code into smaller files, see the suggested structure in the issues or ask the author for a modular version.
+This project is now a single-file game (`wormy.py`) with all logic inside, but you can modularize it further if needed. If you want to split the code into smaller files, see the suggested structure in the comments or ask the author for a modular version.
 
 
 
