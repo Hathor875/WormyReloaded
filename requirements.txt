@@ -1,4 +1,3 @@
 pygame>=2.0.0
-pydub
-simpleaudio
 yaml
+# pydub i simpleaudio usunięte, bo nie są już używane

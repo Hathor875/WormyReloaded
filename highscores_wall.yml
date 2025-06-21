@@ -6,6 +6,10 @@
   difficulty: HARD
   name: EXPE
   score: 750
+- date: 2025-06-21 18:11
+  difficulty: MID
+  name: KRIS
+  score: 640
 - date: 2025-06-19 12:00
   difficulty: MID
   name: SKIL
@@ -24,5 +28,13 @@
   score: 0
 - date: 2025-06-20 00:51
   difficulty: MID
+  name: KRIS
+  score: 0
+- date: 2025-06-21 18:11
+  difficulty: MID
+  name: KIRS
+  score: 0
+- date: 2025-06-21 18:12
+  difficulty: EASY
   name: KRIS
   score: 0

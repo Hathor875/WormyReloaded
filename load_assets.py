@@ -2,8 +2,6 @@ import pygame
 import configuration
 import os
 
-# przywrócona funkcja do ładowania muzyki przez pygame
-
 def load_music():
     pygame.mixer.init()
     music_tracks = {
