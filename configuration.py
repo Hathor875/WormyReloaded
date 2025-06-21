@@ -9,7 +9,6 @@ WINDOWHEIGHT = 480
 CELLSIZE = 20
 CELLWIDTH = int(WINDOWWIDTH / CELLSIZE)
 CELLHEIGHT = int(WINDOWHEIGHT / CELLSIZE)
-
 # Kolory
 WHITE     = (255, 255, 255)
 BLACK     = (  0,   0,   0)
@@ -42,6 +41,10 @@ FX_PATH_LASER = os.path.join(os.path.dirname(__file__), 'assets', 'fx', '811933_
 FX_PATH_KICK = os.path.join(os.path.dirname(__file__), 'assets', 'fx', '812065__logicogonist__fat-kick-2b.ogg')
 FX_PATH_DNB9 = os.path.join(os.path.dirname(__file__), 'assets', 'fx', '189928__cqbcqb__dnb9.ogg')
 
+LETTERS = ['W', 'O', 'R', 'M']
+
+mode_names = ["Portal Mode", "Wall Death"]
+
 # Upewnij się, że jest eksportowany
 __all__ = [
     'FPS', 'SNAKE_MOVE_DELAY', 'WINDOWWIDTH', 'WINDOWHEIGHT', 'CELLSIZE', 'CELLWIDTH', 'CELLHEIGHT',
@@ -49,5 +52,5 @@ __all__ = [
     'UP', 'DOWN', 'LEFT', 'RIGHT', 'HEAD',
     'MUSIC_PATH_1', 'MUSIC_PATH_2', 'MUSIC_PATH_3', 'MUSIC_PATH_4',
     'FX_PATH_POWERUP', 'FX_PATH_WHOOSH', 'FX_PATH_LASER', 'FX_PATH_KICK', 'FX_PATH_DNB9',
-    'LIGHTBLUE', 'YELLOW'
+    'LIGHTBLUE', 'YELLOW', 'LETTERS', 'mode_names'
 ]

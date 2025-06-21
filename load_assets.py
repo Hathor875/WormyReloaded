@@ -21,3 +21,7 @@ def load_fx():
         'dnb9': pygame.mixer.Sound(configuration.FX_PATH_DNB9),
     }
     return fx
+
+def play_fx(sound):
+    if sound:
+        sound.play()
