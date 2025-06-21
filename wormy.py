@@ -324,8 +324,6 @@ def runGame(level):
             powerup_timer -= 1
             if powerup_timer <= 0:
                 powerup_active = False
-
-        # fix: czarne tło na górze planszy na napisy
         DISPLAYSURF.fill(configuration.BGCOLOR)
         pygame.draw.rect(DISPLAYSURF, configuration.BLACK, (0, 0, configuration.WINDOWWIDTH, UI_HEIGHT))
         drawGrid(offset_y=UI_HEIGHT, mode=mode)
@@ -451,7 +449,6 @@ def showGameOverScreen(score=0, mode="Portal Mode", difficulty="EASY"):
                         if FX: FX['powerup'].play()
         highscores.save_highscore(mode, score, name, difficulty)
     else:
-        # Wyświetl informację o naciśnięciu klawisza
         pressKeySurf = infoFont.render('Press any key to continue', True, configuration.DARKGRAY)
         pressKeyRect = pressKeySurf.get_rect()
         pressKeyRect.center = (window_center_x, window_center_y + 50)
@@ -459,17 +456,16 @@ def showGameOverScreen(score=0, mode="Portal Mode", difficulty="EASY"):
         pygame.display.update()
         
         pygame.time.wait(500)
-        checkForKeyPress() # clear out any key presses in the event queue
+        checkForKeyPress() 
         
         while True:
             if checkForKeyPress():
-                pygame.event.get() # clear event queue
+                pygame.event.get() 
                 return
     
     return
 
 def drawScore(score):
-    # fix: nie wyświetlaj mnożnika
     scoreSurf = BASICFONT.render(f'Score: {score}', True, configuration.WHITE)
     scoreRect = scoreSurf.get_rect()
     scoreRect.topleft = (configuration.WINDOWWIDTH - 220, 5)
@@ -478,7 +474,6 @@ def drawScore(score):
 
 def drawWorm(wormCoords, offset_y=0, turbo=False):
     for coord in wormCoords:
-        # nie rysuj segmentów poza planszą (np. y < 0)
         if coord['y'] < 0:
             continue
         x = coord['x'] * configuration.CELLSIZE
@@ -503,12 +498,10 @@ def drawApple(coord, offset_y=0):
 
 
 def drawGrid(offset_y=0, mode='Portal Mode'):
-    # Rysuj siatkę
     for x in range(0, configuration.WINDOWWIDTH, configuration.CELLSIZE):
         pygame.draw.line(DISPLAYSURF, configuration.DARKGRAY, (x, offset_y), (x, configuration.WINDOWHEIGHT + offset_y))
     for y in range(0, configuration.WINDOWHEIGHT, configuration.CELLSIZE):
         pygame.draw.line(DISPLAYSURF, configuration.DARKGRAY, (0, y + offset_y), (configuration.WINDOWWIDTH, y + offset_y))
-    # Rysuj czerwone ramki na krawędziach w trybie Wall Death
     if mode == 'Wall Death':
         border_color = configuration.RED
         border_rect = pygame.Rect(0, offset_y, configuration.WINDOWWIDTH, configuration.WINDOWHEIGHT)

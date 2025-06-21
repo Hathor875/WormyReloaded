@@ -22,6 +22,8 @@
   difficulty: MID
   name: '8751'
   score: 400
+- name: KKKK
+  score: 300
 - date: 2025-06-19 22:26
   difficulty: MID
   name: SSSS
@@ -33,8 +35,4 @@
 - date: 2025-06-21 18:11
   difficulty: MID
   name: KIRS
-  score: 0
-- date: 2025-06-21 18:12
-  difficulty: EASY
-  name: KRIS
   score: 0

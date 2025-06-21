@@ -1,6 +1,5 @@
 import pygame
 import configuration
-import os
 
 def load_music():
     pygame.mixer.init()
