@@ -24,6 +24,8 @@
   score: 400
 - name: KKKK
   score: 300
+- name: KKKK
+  score: 2
 - date: 2025-06-19 22:26
   difficulty: MID
   name: SSSS
@@ -31,8 +33,4 @@
 - date: 2025-06-20 00:51
   difficulty: MID
   name: KRIS
-  score: 0
-- date: 2025-06-21 18:11
-  difficulty: MID
-  name: KIRS
   score: 0

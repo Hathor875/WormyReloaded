@@ -516,7 +516,7 @@ def drawLetter(char, pos, offset_y=0):
     DISPLAYSURF.blit(surf, rect)
 
 def drawCollectedLetters(collected, powerup_active, super_apples_left=0):
-    font = pygame.font.Font('freesansbold.ttf', 24)
+    font = pygame.font.Font('freesansbold.ttf', 20)
     blink = (pygame.time.get_ticks() // 300) % 2 == 0
     for i, l in enumerate(LETTERS):
         if i < len(collected):
@@ -529,14 +529,14 @@ def drawCollectedLetters(collected, powerup_active, super_apples_left=0):
         rect = surf.get_rect(topleft=(20 + i*30, 5))
         DISPLAYSURF.blit(surf, rect)
     if powerup_active or super_apples_left > 0:
-        text = f'  POWER-UP! ({super_apples_left})'
+        text = f'Power-Up! ({super_apples_left})'
         surf = font.render(text, True, configuration.GREEN)
-        rect = surf.get_rect(topleft=(20 + len(LETTERS)*30 + 10, 5))
+        rect = surf.get_rect(topleft=(72 + len(LETTERS)*15 + 5, 5))
         DISPLAYSURF.blit(surf, rect)
 
 def drawFullPowerupCross(apple, offset_y=0):
     overlay = pygame.Surface((configuration.WINDOWWIDTH, configuration.WINDOWHEIGHT), pygame.SRCALPHA)
-    alpha = 15
+    alpha = 25
 
     if 'x' not in apple or 'y' not in apple:
         print("Error: Invalid apple coordinates")
@@ -548,8 +548,8 @@ def drawFullPowerupCross(apple, offset_y=0):
     rect_v = pygame.Rect(x, 0, configuration.CELLSIZE, configuration.WINDOWHEIGHT)
     rect_h = pygame.Rect(0, y, configuration.WINDOWWIDTH, configuration.CELLSIZE)
 
-    pygame.draw.rect(overlay, (0, 255, 0, alpha), rect_v)  # Changed color to green
-    pygame.draw.rect(overlay, (0, 255, 0, alpha), rect_h)  # Changed color to green
+    pygame.draw.rect(overlay, (0, 255, 0, alpha), rect_v)  
+    pygame.draw.rect(overlay, (0, 255, 0, alpha), rect_h)  
 
     DISPLAYSURF.blit(overlay, (0, offset_y))
 
